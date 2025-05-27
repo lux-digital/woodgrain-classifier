@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -80,7 +81,7 @@
       const prediction = await model.predict(webcam.canvas);
       prediction.sort((a, b) => b.probability - a.probability);
       const top = prediction[0];
-      labelContainer.innerHTML = ${top.className} (${(top.probability * 100).toFixed(1)}%);
+      labelContainer.innerHTML = `${top.className} (${(top.probability * 100).toFixed(1)}%)`;
     }
 
     async function switchCamera() {
