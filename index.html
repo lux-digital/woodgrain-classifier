@@ -33,7 +33,8 @@
       await webcam.play();
       window.requestAnimationFrame(loop);
 
-      document.getElementById("webcam").appendChild(webcam.canvas);
+      document.getElementById("webcam").replaceWith(webcam.canvas);
+webcam.canvas.setAttribute("id", "webcam");
       labelContainer = document.getElementById("label");
     }
 
