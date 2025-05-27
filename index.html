@@ -13,8 +13,9 @@
       margin: 0;
       padding: 20px;
     }
-    canvas {
-      max-width: 100%;
+    video {
+      width: 100%;
+      max-width: 480px;
       border-radius: 10px;
     }
     #label {
@@ -22,24 +23,17 @@
       font-weight: bold;
       margin-top: 20px;
     }
-    button {
-      margin-top: 20px;
-      padding: 10px 20px;
-      font-size: 18px;
-    }
   </style>
 </head>
 <body>
   <h1>Product Classifier</h1>
-  <div id="webcam-container"></div>
+  <div><video id="webcam" autoplay playsinline muted></video></div>
   <p id="label">Initializing...</p>
-  <button onclick="switchCamera()">Switch Camera</button>
 
   <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
   <script>
     const URL = "./";
-    let model, webcam, labelContainer, maxPredictions;
-    let useFrontCamera = true;
+    let model, webcamEl, labelContainer, maxPredictions, stream;
 
     async function init() {
       const modelURL = URL + "model.json";
@@ -48,45 +42,36 @@
       model = await tmImage.load(modelURL, metadataURL);
       maxPredictions = model.getTotalClasses();
 
-      await setupWebcam();
-    }
-
-    async function setupWebcam() {
-      if (webcam) {
-        await webcam.stop();
-        document.getElementById("webcam-container").innerHTML = "";
-      }
-
-      webcam = new tmImage.Webcam(400, 400, true);
+      labelContainer = document.getElementById("label");
+      webcamEl = document.getElementById("webcam");
 
       try {
-        await webcam.setup({ facingMode: useFrontCamera ? "user" : "environment" });
-        await webcam.play();
-        document.getElementById("webcam-container").appendChild(webcam.canvas);
-        labelContainer = document.getElementById("label");
-        window.requestAnimationFrame(loop);
-      } catch (error) {
-        document.getElementById("label").innerText = "Camera access denied or unavailable.";
-        console.error("Camera error:", error);
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "user" }, audio: false
+        });
+
+        webcamEl.srcObject = stream;
+        webcamEl.addEventListener('loadeddata', predictLoop);
+      } catch (err) {
+        labelContainer.innerText = "Unable to access the camera.";
+        console.error("Camera error:", err);
       }
     }
 
-    async function loop() {
-      webcam.update();
-      await predict();
-      window.requestAnimationFrame(loop);
-    }
+    async function predictLoop() {
+      const tempCanvas = document.createElement("canvas");
+      const ctx = tempCanvas.getContext("2d");
 
-    async function predict() {
-      const prediction = await model.predict(webcam.canvas);
-      prediction.sort((a, b) => b.probability - a.probability);
-      const top = prediction[0];
-      labelContainer.innerHTML = `${top.className} (${(top.probability * 100).toFixed(1)}%)`;
-    }
-
-    async function switchCamera() {
-      useFrontCamera = !useFrontCamera;
-      await setupWebcam();
+      const predict = async () => {
+        tempCanvas.width = webcamEl.videoWidth;
+        tempCanvas.height = webcamEl.videoHeight;
+        ctx.drawImage(webcamEl, 0, 0);
+        const prediction = await model.predict(tempCanvas);
+        prediction.sort((a, b) => b.probability - a.probability);
+        labelContainer.innerText = `${prediction[0].className} (${(prediction[0].probability * 100).toFixed(1)}%)`;
+        requestAnimationFrame(predict);
+      };
+      predict();
     }
 
     window.addEventListener('DOMContentLoaded', init);
