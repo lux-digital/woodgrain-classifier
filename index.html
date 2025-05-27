@@ -8,9 +8,9 @@
     body {
       font-family: sans-serif;
       text-align: center;
+      background-color: #f4f4f4;
       margin: 0;
       padding: 20px;
-      background-color: #f4f4f4;
     }
     canvas {
       max-width: 100%;
@@ -43,21 +43,15 @@
       webcam = new tmImage.Webcam(400, 400, true);
 
       try {
-        // Prefer rear-facing camera
-        await webcam.setup({ facingMode: { exact: "environment" } });
-      } catch (err) {
-        console.warn("Rear camera not available. Falling back to default.");
-        await webcam.setup(); // fallback
+        await webcam.setup({ facingMode: "environment" }); // no "exact"
+        await webcam.play();
+        document.getElementById("webcam-container").appendChild(webcam.canvas);
+        labelContainer = document.getElementById("label");
+        window.requestAnimationFrame(loop);
+      } catch (error) {
+        console.error("Webcam setup failed:", error);
+        document.getElementById("label").innerText = "Camera permission blocked or unavailable.";
       }
-
-      await webcam.play();
-
-      // Attach canvas to container
-      document.getElementById("webcam-container").appendChild(webcam.canvas);
-      labelContainer = document.getElementById("label");
-
-      // Start prediction loop
-      window.requestAnimationFrame(loop);
     }
 
     async function loop() {
@@ -73,7 +67,6 @@
       labelContainer.innerHTML = ${top.className} (${(top.probability * 100).toFixed(1)}%);
     }
 
-    // Auto-start on page load
     window.addEventListener('DOMContentLoaded', init);
   </script>
 </body>
