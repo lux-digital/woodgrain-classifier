@@ -2,8 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Woodgrain Product Classifier</title>
+    <meta name="viewport" content="width=device-width, initial-scale= Woodgrain Product Classifier</title>
     <style>
         body {
             margin: 0;
@@ -31,6 +30,7 @@
             color: red;
             margin-top: 10px;
             word-wrap: break-word;
+            max-width: 90%;
         }
     </style>
 </head>
@@ -43,9 +43,9 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
     <script>
-        // Replace <your-username> with your actual GitHub username
-        const modelURL = 'https://raw.githubusercontent.com/<lux-digital>/woodgrain-classifier/main/model.json';
-        const metadataURL = 'https://raw.githubusercontent.com/<lux-digital>/woodgrain-classifier/main/metadata.json';
+        // Model URLs with your GitHub username
+        const modelURL = 'https://raw.githubusercontent.com/lux-digital/woodgrain-classifier/main/model.json';
+        const metadataURL = 'https://raw.githubusercontent.com/lux-digital/woodgrain-classifier/main/metadata.json';
 
         let model, video, canvas, ctx, output, errorDiv;
 
@@ -57,13 +57,27 @@
             errorDiv = document.getElementById('error');
 
             // Log the model URLs for debugging
-            console.log('Model URL:', modelURL);
-            console.log('Metadata URL:', metadataURL);
+            console.log('Attempting to load model from:', modelURL);
+            console.log('Attempting to load metadata from:', metadataURL);
+
+            // Test if URLs are accessible
+            try {
+                const modelResponse = await fetch(modelURL);
+                if (!modelResponse.ok) throw new Error(Model fetch failed with status ${modelResponse.status}: ${modelResponse.statusText});
+                const metadataResponse = await fetch(metadataURL);
+                if (!metadataResponse.ok) throw new Error(Metadata fetch failed with status ${metadataResponse.status}: ${metadataResponse.statusText});
+                console.log('Model and metadata URLs are accessible');
+            } catch (fetchError) {
+                errorDiv.textContent = 'Error fetching model files: ' + fetchError.message;
+                console.error('Fetch error:', fetchError);
+                return;
+            }
 
             // Load the Teachable Machine model
             try {
                 model = await tmImage.load(modelURL, metadataURL);
                 output.textContent = 'Model loaded successfully!';
+                console.log('Model loaded successfully');
             } catch (error) {
                 errorDiv.textContent = 'Error loading model: ' + error.message;
                 console.error('Model load error:', error);
@@ -81,7 +95,7 @@
                 video.onloadedmetadata = () => {
                     video.play();
                     canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
+                    canvas.height = video.height || video.videoHeight; // Handle potential height issues
                     predict();
                 };
             } catch (error) {
@@ -100,7 +114,6 @@
                 let maxProb = 0;
                 let label = '';
 
-                // Find the prediction with the highest probability
                 for (let i = 0; i < prediction.length; i++) {
                     if (prediction[i].probability > maxProb) {
                         maxProb = prediction[i].probability;
@@ -108,14 +121,12 @@
                     }
                 }
 
-                // Update the output
                 output.textContent = Prediction: ${label} (${(maxProb * 100).toFixed(2)}%);
             } catch (error) {
                 errorDiv.textContent = 'Error during prediction: ' + error.message;
                 console.error('Prediction error:', error);
             }
 
-            // Continue predicting
             requestAnimationFrame(predict);
         }
 
