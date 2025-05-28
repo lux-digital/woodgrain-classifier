@@ -43,18 +43,10 @@
       const webcamEl = document.getElementById("webcam");
 
       try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const videoDevices = devices.filter(device => device.kind === "videoinput");
-        let rearCamera = videoDevices.find(device => device.label.toLowerCase().includes("back"));
-
-        const constraints = {
-          video: rearCamera
-            ? { deviceId: rearCamera.deviceId }
-            : { facingMode: { ideal: "environment" } },
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
           audio: false
-        };
-
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        });
         webcamEl.srcObject = stream;
         webcamEl.addEventListener("loadeddata", () => predictLoop(model, webcamEl, labelContainer));
       } catch (err) {
