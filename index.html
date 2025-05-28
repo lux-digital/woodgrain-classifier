@@ -1,80 +1,114 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Product Classifier</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      text-align: center;
-      background-color: #f4f4f4;
-      margin: 0;
-      padding: 20px;
-    }
-    video {
-      width: 100%;
-      max-width: 480px;
-      border-radius: 10px;
-    }
-    #label {
-      font-size: 22px;
-      font-weight: bold;
-      margin-top: 20px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Recognition</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        #video, #canvas {
+            width: 100%;
+            max-width: 640px;
+            height: auto;
+            border: 2px solid #333;
+        }
+        #output {
+            margin-top: 20px;
+            font-size: 18px;
+            text-align: center;
+        }
+        #error {
+            color: red;
+            margin-top: 10px;
+        }
+    </style>
 </head>
 <body>
-  <h1>Product Classifier</h1>
-  <div><video id="webcam" autoplay playsinline muted></video></div>
-  <p id="label">Initializing...</p>
+    <video id="video" autoplay playsinline></video>
+    <canvas id="canvas" style="display: none;"></canvas>
+    <div id="output">Loading model...</div>
+    <div id="error"></div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
-  <script>
-    async function init() {
-      const modelURL = "./model.json";
-      const metadataURL = "./metadata.json";
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+    <script>
+        // Replace with your Teachable Machine model URL
+        const modelURL = 'https://your-github-repo/path/to/model.json';
+        const metadataURL = 'https://your-github-repo/path/to/metadata.json';
 
-      const model = await tmImage.load(modelURL, metadataURL);
-      const maxPredictions = model.getTotalClasses();
+        let model, video, canvas, ctx, output, errorDiv;
 
-      const labelContainer = document.getElementById("label");
-      const webcamEl = document.getElementById("webcam");
+        async function init() {
+            video = document.getElementById('video');
+            canvas = document.getElementById('canvas');
+            ctx = canvas.getContext('2d');
+            output = document.getElementById('output');
+            errorDiv = document.getElementById('error');
 
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: false
-        });
-        webcamEl.srcObject = stream;
-        webcamEl.addEventListener("loadeddata", () => predictLoop(model, webcamEl, labelContainer));
-      } catch (err) {
-        labelContainer.innerText = "Camera error: " + err.message;
-        console.error(err);
-      }
-    }
+            // Load the Teachable Machine model
+            try {
+                model = await tmImage.load(modelURL, metadataURL);
+                output.textContent = 'Model loaded successfully!';
+            } catch (error) {
+                errorDiv.textContent = 'Error loading model: ' + error.message;
+                return;
+            }
 
-    async function predictLoop(model, webcamEl, labelContainer) {
-      const tempCanvas = document.createElement("canvas");
-      const ctx = tempCanvas.getContext("2d");
+            // Set up the video stream with rear-facing camera
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'environment' // Use rear-facing camera
+                    }
+                });
+                video.srcObject = stream;
+                video.onloadedmetadata = () => {
+                    video.play();
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    predict();
+                };
+            } catch (error) {
+                errorDiv.textContent = 'Error accessing camera: ' + error.message;
+            }
+        }
 
-      async function predict() {
-        tempCanvas.width = webcamEl.videoWidth;
-        tempCanvas.height = webcamEl.videoHeight;
-        ctx.drawImage(webcamEl, 0, 0);
+        async function predict() {
+            // Draw the video frame to the canvas
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        const prediction = await model.predict(tempCanvas);
-        prediction.sort((a, b) => b.probability - a.probability);
-        labelContainer.innerText = `${prediction[0].className} (${(prediction[0].probability * 100).toFixed(1)}%)`;
+            // Make a prediction
+            const prediction = await model.predict(canvas);
+            let maxProb = 0;
+            let label = '';
 
-        requestAnimationFrame(predict);
-      }
+            // Find the prediction with the highest probability
+            for (let i = 0; i < prediction.length; i++) {
+                if (prediction[i].probability > maxProb) {
+                    maxProb = prediction[i].probability;
+                    label = prediction[i].className;
+                }
+            }
 
-      predict();
-    }
+            // Update the output
+            output.textContent = Prediction: ${label} (${(maxProb * 100).toFixed(2)}%);
 
-    window.addEventListener("DOMContentLoaded", init);
-  </script>
+            // Continue predicting
+            requestAnimationFrame(predict);
+        }
+
+        // Start the application
+        window.onload = init;
+    </script>
 </body>
 </html>
