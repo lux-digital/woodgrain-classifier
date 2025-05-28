@@ -1,137 +1,60 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale= Woodgrain Product Classifier</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            background-color: #f0f0f0;
-            font-family: Arial, sans-serif;
+<div>Teachable Machine Image Model</div>
+<button type="button" onclick="init()">Start</button>
+<div id="webcam-container"></div>
+<div id="label-container"></div>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+<script type="text/javascript">
+    // More API functions here:
+    // https://github.com/googlecreativelab/teachablemachine-community/tree/master/libraries/image
+
+    // the link to your model provided by Teachable Machine export panel
+    const URL = "https://teachablemachine.withgoogle.com/models/zPFXk5dVn/";
+
+    let model, webcam, labelContainer, maxPredictions;
+
+    // Load the image model and setup the webcam
+    async function init() {
+        const modelURL = URL + "model.json";
+        const metadataURL = URL + "metadata.json";
+
+        // load the model and metadata
+        // Refer to tmImage.loadFromFiles() in the API to support files from a file picker
+        // or files from your local hard drive
+        // Note: the pose library adds "tmImage" object to your window (window.tmImage)
+        model = await tmImage.load(modelURL, metadataURL);
+        maxPredictions = model.getTotalClasses();
+
+        // Convenience function to setup a webcam
+        const flip = true; // whether to flip the webcam
+        webcam = new tmImage.Webcam(200, 200, flip); // width, height, flip
+        await webcam.setup(); // request access to the webcam
+        await webcam.play();
+        window.requestAnimationFrame(loop);
+
+        // append elements to the DOM
+        document.getElementById("webcam-container").appendChild(webcam.canvas);
+        labelContainer = document.getElementById("label-container");
+        for (let i = 0; i < maxPredictions; i++) { // and class labels
+            labelContainer.appendChild(document.createElement("div"));
         }
-        #video, #canvas {
-            width: 100%;
-            max-width: 640px;
-            height: auto;
-            border: 2px solid #333;
+    }
+
+    async function loop() {
+        webcam.update(); // update the webcam frame
+        await predict();
+        window.requestAnimationFrame(loop);
+    }
+
+    // run the webcam image through the image model
+    async function predict() {
+        // predict can take in an image, video or canvas html element
+        const prediction = await model.predict(webcam.canvas);
+        for (let i = 0; i < maxPredictions; i++) {
+            const classPrediction =
+                prediction[i].className + ": " + prediction[i].probability.toFixed(2);
+            labelContainer.childNodes[i].innerHTML = classPrediction;
         }
-        #output {
-            margin-top: 20px;
-            font-size: 18px;
-            text-align: center;
-        }
-        #error {
-            color: red;
-            margin-top: 10px;
-            word-wrap: break-word;
-            max-width: 90%;
-        }
-    </style>
-</head>
-<body>
-    <video id="video" autoplay playsinline></video>
-    <canvas id="canvas" style="display: none;"></canvas>
-    <div id="output">Loading model...</div>
-    <div id="error"></div>
+    }
+</script>
 
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
-    <script>
-        // Model URLs with your GitHub username
-        const modelURL = 'https://raw.githubusercontent.com/lux-digital/woodgrain-classifier/main/model.json';
-        const metadataURL = 'https://raw.githubusercontent.com/lux-digital/woodgrain-classifier/main/metadata.json';
-
-        let model, video, canvas, ctx, output, errorDiv;
-
-        async function init() {
-            video = document.getElementById('video');
-            canvas = document.getElementById('canvas');
-            ctx = canvas.getContext('2d');
-            output = document.getElementById('output');
-            errorDiv = document.getElementById('error');
-
-            // Log the model URLs for debugging
-            console.log('Attempting to load model from:', modelURL);
-            console.log('Attempting to load metadata from:', metadataURL);
-
-            // Test if URLs are accessible
-            try {
-                const modelResponse = await fetch(modelURL);
-                if (!modelResponse.ok) throw new Error(Model fetch failed with status ${modelResponse.status}: ${modelResponse.statusText});
-                const metadataResponse = await fetch(metadataURL);
-                if (!metadataResponse.ok) throw new Error(Metadata fetch failed with status ${metadataResponse.status}: ${metadataResponse.statusText});
-                console.log('Model and metadata URLs are accessible');
-            } catch (fetchError) {
-                errorDiv.textContent = 'Error fetching model files: ' + fetchError.message;
-                console.error('Fetch error:', fetchError);
-                return;
-            }
-
-            // Load the Teachable Machine model
-            try {
-                model = await tmImage.load(modelURL, metadataURL);
-                output.textContent = 'Model loaded successfully!';
-                console.log('Model loaded successfully');
-            } catch (error) {
-                errorDiv.textContent = 'Error loading model: ' + error.message;
-                console.error('Model load error:', error);
-                return;
-            }
-
-            // Set up the video stream with rear-facing camera
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        facingMode: 'environment' // Use rear-facing camera
-                    }
-                });
-                video.srcObject = stream;
-                video.onloadedmetadata = () => {
-                    video.play();
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.height || video.videoHeight; // Handle potential height issues
-                    predict();
-                };
-            } catch (error) {
-                errorDiv.textContent = 'Error accessing camera: ' + error.message;
-                console.error('Camera error:', error);
-            }
-        }
-
-        async function predict() {
-            // Draw the video frame to the canvas
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-            // Make a prediction
-            try {
-                const prediction = await model.predict(canvas);
-                let maxProb = 0;
-                let label = '';
-
-                for (let i = 0; i < prediction.length; i++) {
-                    if (prediction[i].probability > maxProb) {
-                        maxProb = prediction[i].probability;
-                        label = prediction[i].className;
-                    }
-                }
-
-                output.textContent = Prediction: ${label} (${(maxProb * 100).toFixed(2)}%);
-            } catch (error) {
-                errorDiv.textContent = 'Error during prediction: ' + error.message;
-                console.error('Prediction error:', error);
-            }
-
-            requestAnimationFrame(predict);
-        }
-
-        // Start the application
-        window.onload = init;
-    </script>
-</body>
-</html>
