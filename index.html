@@ -1,103 +1,120 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Teachable Machine Image Model</title>
+    <meta charset="UTF-8">
+    <title>Woodgrain Classifier</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
     <style>
         body {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            margin: 0;
+            padding: 0;
             font-family: Arial, sans-serif;
-        }
-        #webcam-container {
-            margin: 20px;
-        }
-        #label-container {
-            margin-top: 20px;
+            background-color: #f9f9f9;
             text-align: center;
         }
+
+        header {
+            padding: 10px;
+            background-color: #fff;
+        }
+
+        #logo {
+            width: 100%;
+            max-width: 850px;
+            height: auto;
+        }
+
+        h1 {
+            font-size: 1.8em;
+            margin: 10px 0;
+        }
+
+        p {
+            font-size: 1.1em;
+            color: #555;
+        }
+
+        #webcam-container {
+            margin: 0 auto;
+            max-width: 100%;
+            padding: 10px;
+        }
+
         video {
             width: 100%;
-            max-width: 18f00px;
-            height: auto;
+            max-width: 480px;
+            border-radius: 10px;
             border: 2px solid #333;
+        }
+
+        #label-container {
+            margin-top: 20px;
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #222;
         }
     </style>
 </head>
 <body>
-    <h1>Woodgrain Classifier</h1>
-    <p>Point your camera at a woodgrain surface to classify it.</p>
+    <header>
+        <img id="logo" src="logo.png" alt="Logo" />
+        <h1>Woodgrain Classifier</h1>
+        <p>Point your camera at a woodgrain surface to classify it.</p>
+    </header>
+
     <div id="webcam-container"></div>
     <div id="label-container"></div>
 
     <script>
-        // URL to your model provided by Teachable Machine export panel
         const URL = "https://teachablemachine.withgoogle.com/models/zPFXk5dVn/";
 
         let model, labelContainer, video;
 
-        // Load the image model
         async function init() {
             const modelURL = URL + "model.json";
             const metadataURL = URL + "metadata.json";
 
-            // Load the model and metadata
             model = await tmImage.load(modelURL, metadataURL);
 
-            // Create a video element to display the camera feed
             video = document.createElement("video");
             video.setAttribute("autoplay", "");
             video.setAttribute("muted", "");
-            video.setAttribute("playsinline", ""); // Ensures video plays inline on mobile
+            video.setAttribute("playsinline", "");
             document.getElementById("webcam-container").appendChild(video);
 
-            // Set up the label container for predictions
             labelContainer = document.getElementById("label-container");
             for (let i = 0; i < model.getTotalClasses(); i++) {
                 labelContainer.appendChild(document.createElement("div"));
             }
 
-            // Access the rear-facing camera
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        facingMode: "environment" // Use the rear-facing camera
-                    },
+                    video: { facingMode: "environment" },
                     audio: false
                 });
                 video.srcObject = stream;
                 video.play();
-
-                // Start the prediction loop once the video is playing
                 video.addEventListener("loadeddata", () => {
                     window.requestAnimationFrame(loop);
                 });
             } catch (err) {
                 console.error("Error accessing the camera:", err);
-                labelContainer.innerHTML = "Error accessing the camera. Please ensure camera permissions are granted.";
+                labelContainer.innerHTML = "Camera error. Check permissions.";
             }
         }
 
-        // Run the webcam image through the image model
         async function loop() {
-            // Predict using the video frame
             const prediction = await model.predict(video);
-
-            // Display predictions
             for (let i = 0; i < model.getTotalClasses(); i++) {
                 const classPrediction = prediction[i].className + ": " + prediction[i].probability.toFixed(2);
                 labelContainer.childNodes[i].innerHTML = classPrediction;
             }
-
-            // Continue the loop
             window.requestAnimationFrame(loop);
         }
 
-        // Initialize everything when the page loads
         window.onload = init;
     </script>
 </body>
 </html>
-
