@@ -3,27 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <title>Woodgrain Classifier</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
     <style>
         body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f9f9f9;
             margin: 0;
             padding: 0;
-            font-family: Arial, sans-serif;
-            background-color: #f9f9f9;
-            text-align: center;
-        }
-
-        header {
-            padding: 10px;
-            background-color: #fff;
         }
 
         #logo {
             width: 100%;
             max-width: 850px;
             height: auto;
+            margin-top: 10px;
         }
 
         h1 {
@@ -75,22 +71,18 @@
     </style>
 </head>
 <body>
-    <header>
-        <img id="logo" src="logo.png" alt="Logo" />
-        <h1>Woodgrain Classifier</h1>
-        <p>Point your camera at a woodgrain surface to classify it.</p>
-    </header>
+    <img id="logo" src="logo.png" alt="Logo" />
+    <h1>Woodgrain Classifier</h1>
+    <p>Point your camera at a woodgrain surface to classify it.</p>
 
     <div id="webcam-container"></div>
     <div id="label-container">Initializing...</div>
-    <div id="confidence-bar">
-        <div id="confidence-fill"></div>
-    </div>
+    <div id="confidence-bar"><div id="confidence-fill"></div></div>
 
     <script>
         const URL = "https://teachablemachine.withgoogle.com/models/zPFXk5dVn/";
 
-        let model, labelContainer, video, confidenceFill;
+        let model, video, labelContainer, confidenceFill;
 
         async function init() {
             const modelURL = URL + "model.json";
@@ -114,26 +106,22 @@
                 });
                 video.srcObject = stream;
                 video.play();
+
                 video.addEventListener("loadeddata", () => {
                     window.requestAnimationFrame(loop);
                 });
             } catch (err) {
-                console.error("Error accessing the camera:", err);
-                labelContainer.innerHTML = "Camera error. Check permissions.";
+                console.error("Camera access error:", err);
+                labelContainer.innerText = "Unable to access camera. Please allow permissions.";
             }
         }
 
         async function loop() {
             const prediction = await model.predict(video);
+            const best = prediction.reduce((a, b) => a.probability > b.probability ? a : b);
 
-            // Find the most confident prediction
-            const bestPrediction = prediction.reduce((prev, current) => {
-                return (prev.probability > current.probability) ? prev : current;
-            });
-
-            const confidence = (bestPrediction.probability * 100).toFixed(1);
-            labelContainer.innerHTML = ${confidence}% ${bestPrediction.className};
-
+            const confidence = (best.probability * 100).toFixed(1);
+            labelContainer.innerText = ${confidence}% ${best.className};
             confidenceFill.style.width = ${confidence}%;
 
             window.requestAnimationFrame(loop);
