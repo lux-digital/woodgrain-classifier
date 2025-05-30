@@ -72,9 +72,14 @@
 
         .progress {
             height: 100%;
-            background-color: #4CAF50; /* Green color for the bar */
+            background-color: #4CAF50;
             border-radius: 10px;
             transition: width 0.3s ease;
+        }
+
+        #error-message {
+            color: red;
+            margin-top: 10px;
         }
     </style>
 </head>
@@ -92,6 +97,7 @@
             <div id="progress" class="progress" style="width: 0%;"></div>
         </div>
     </div>
+    <div id="error-message"></div>
 
     <script>
         const URL = "https://teachablemachine.withgoogle.com/models/zPFXk5dVn/";
@@ -102,47 +108,60 @@
             const modelURL = URL + "model.json";
             const metadataURL = URL + "metadata.json";
 
-            model = await tmImage.load(modelURL, metadataURL);
-
-            video = document.createElement("video");
-            video.setAttribute("autoplay", "");
-            video.setAttribute("muted", "");
-            video.setAttribute("playsinline", "");
-            document.getElementById("webcam-container").appendChild(video);
-
             try {
+                // Load the model
+                model = await tmImage.load(modelURL, metadataURL);
+                console.log("Model loaded successfully");
+
+                // Set up video element
+                video = document.createElement("video");
+                video.setAttribute("autoplay", "");
+                video.setAttribute("muted", "");
+                video.setAttribute("playsinline", "");
+                document.getElementById("webcam-container").appendChild(video);
+
+                // Request camera access
                 const stream = await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: "environment" },
                     audio: false
                 });
                 video.srcObject = stream;
                 video.play();
+                console.log("Camera stream started");
+
+                // Start prediction loop
                 video.addEventListener("loadeddata", () => {
+                    console.log("Video loaded, starting loop");
                     window.requestAnimationFrame(loop);
                 });
             } catch (err) {
-                console.error("Error accessing the camera:", err);
-                document.getElementById("prediction-container").innerHTML = "Camera error. Check permissions.";
+                console.error("Initialization error:", err);
+                document.getElementById("error-message").innerHTML = Error: ${err.message}. Check console for details.;
             }
         }
 
         async function loop() {
-            const prediction = await model.predict(video);
-            // Find the prediction with the highest probability
-            let maxPrediction = prediction[0];
-            for (let i = 1; i < prediction.length; i++) {
-                if (prediction[i].probability > maxPrediction.probability) {
-                    maxPrediction = prediction[i];
+            try {
+                const prediction = await model.predict(video);
+                // Find the prediction with the highest probability
+                let maxPrediction = prediction[0];
+                for (let i = 1; i < prediction.length; i++) {
+                    if (prediction[i].probability > maxPrediction.probability) {
+                        maxPrediction = prediction[i];
+                    }
                 }
+
+                // Display the most likely prediction as a percentage
+                const confidence = (maxPrediction.probability * 100).toFixed(0);
+                const predictionText = ${confidence}% ${maxPrediction.className};
+                document.getElementById("prediction-text").innerHTML = predictionText;
+
+                // Update the progress bar
+                document.getElementById("progress").style.width = ${confidence}%;
+            } catch (err) {
+                console.error("Prediction error:", err);
+                document.getElementById("error-message").innerHTML = Prediction error: ${err.message}. Check console for details.;
             }
-
-            // Display the most likely prediction as a percentage
-            const confidence = (maxPrediction.probability * 100).toFixed(0);
-            const predictionText = ${confidence}% ${maxPrediction.className};
-            document.getElementById("prediction-text").innerHTML = predictionText;
-
-            // Update the progress bar
-            document.getElementById("progress").style.width = ${confidence}%;
 
             window.requestAnimationFrame(loop);
         }
