@@ -49,11 +49,32 @@
             border: 2px solid #333;
         }
 
-        #label-container {
+        #prediction-container {
             margin-top: 20px;
             font-size: 1.5em;
             font-weight: bold;
             color: #222;
+        }
+
+        .prediction-text {
+            margin-bottom: 10px;
+        }
+
+        .progress-bar {
+            width: 200px;
+            height: 20px;
+            background-color: #ddd;
+            border-radius: 10px;
+            overflow: hidden;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .progress {
+            height: 100%;
+            background-color: #4CAF50; /* Green color for the bar */
+            border-radius: 10px;
+            transition: width 0.3s ease;
         }
     </style>
 </head>
@@ -65,12 +86,17 @@
     </header>
 
     <div id="webcam-container"></div>
-    <div id="label-container"></div>
+    <div id="prediction-container">
+        <div id="prediction-text" class="prediction-text"></div>
+        <div class="progress-bar">
+            <div id="progress" class="progress" style="width: 0%;"></div>
+        </div>
+    </div>
 
     <script>
         const URL = "https://teachablemachine.withgoogle.com/models/zPFXk5dVn/";
 
-        let model, labelContainer, video;
+        let model, video;
 
         async function init() {
             const modelURL = URL + "model.json";
@@ -84,11 +110,6 @@
             video.setAttribute("playsinline", "");
             document.getElementById("webcam-container").appendChild(video);
 
-            labelContainer = document.getElementById("label-container");
-            for (let i = 0; i < model.getTotalClasses(); i++) {
-                labelContainer.appendChild(document.createElement("div"));
-            }
-
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: "environment" },
@@ -101,16 +122,28 @@
                 });
             } catch (err) {
                 console.error("Error accessing the camera:", err);
-                labelContainer.innerHTML = "Camera error. Check permissions.";
+                document.getElementById("prediction-container").innerHTML = "Camera error. Check permissions.";
             }
         }
 
         async function loop() {
             const prediction = await model.predict(video);
-            for (let i = 0; i < model.getTotalClasses(); i++) {
-                const classPrediction = prediction[i].className + ": " + prediction[i].probability.toFixed(2);
-                labelContainer.childNodes[i].innerHTML = classPrediction;
+            // Find the prediction with the highest probability
+            let maxPrediction = prediction[0];
+            for (let i = 1; i < prediction.length; i++) {
+                if (prediction[i].probability > maxPrediction.probability) {
+                    maxPrediction = prediction[i];
+                }
             }
+
+            // Display the most likely prediction as a percentage
+            const confidence = (maxPrediction.probability * 100).toFixed(0);
+            const predictionText = ${confidence}% ${maxPrediction.className};
+            document.getElementById("prediction-text").innerHTML = predictionText;
+
+            // Update the progress bar
+            document.getElementById("progress").style.width = ${confidence}%;
+
             window.requestAnimationFrame(loop);
         }
 
