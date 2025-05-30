@@ -8,18 +8,22 @@
     <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            background-color: #f9f9f9;
             margin: 0;
             padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            text-align: center;
+        }
+
+        header {
+            padding: 10px;
+            background-color: #fff;
         }
 
         #logo {
             width: 100%;
             max-width: 850px;
             height: auto;
-            margin-top: 10px;
         }
 
         h1 {
@@ -47,26 +51,9 @@
 
         #label-container {
             margin-top: 20px;
-            font-size: 1.6em;
+            font-size: 1.5em;
             font-weight: bold;
             color: #222;
-        }
-
-        #confidence-bar {
-            width: 90%;
-            max-width: 480px;
-            margin: 10px auto;
-            height: 20px;
-            background-color: #ddd;
-            border-radius: 10px;
-            overflow: hidden;
-        }
-
-        #confidence-fill {
-            height: 100%;
-            width: 0%;
-            background-color: #4CAF50;
-            transition: width 0.2s ease;
         }
     </style>
 </head>
@@ -83,7 +70,7 @@
     <script>
         const URL = "https://teachablemachine.withgoogle.com/models/zPFXk5dVn/";
 
-        let model, labelContainer, video; confidenceFill;
+        let model, labelContainer, video;
 
         async function init() {
             const modelURL = URL + "model.json";
