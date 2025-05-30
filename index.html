@@ -3,23 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <title>Woodgrain Classifier</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            background-color: #f9f9f9;
             margin: 0;
             padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            text-align: center;
+        }
+
+        header {
+            padding: 10px;
+            background-color: #fff;
         }
 
         #logo {
             width: 100%;
             max-width: 850px;
             height: auto;
-            margin-top: 10px;
         }
 
         h1 {
@@ -47,42 +51,26 @@
 
         #label-container {
             margin-top: 20px;
-            font-size: 1.6em;
+            font-size: 1.5em;
             font-weight: bold;
             color: #222;
-        }
-
-        #confidence-bar {
-            width: 90%;
-            max-width: 480px;
-            margin: 10px auto;
-            height: 20px;
-            background-color: #ddd;
-            border-radius: 10px;
-            overflow: hidden;
-        }
-
-        #confidence-fill {
-            height: 100%;
-            width: 0%;
-            background-color: #4CAF50;
-            transition: width 0.2s ease;
         }
     </style>
 </head>
 <body>
-    <img id="logo" src="logo.png" alt="Logo" />
-    <h1>Woodgrain Classifier</h1>
-    <p>Point your camera at a woodgrain surface to classify it.</p>
+    <header>
+        <img id="logo" src="logo.png" alt="Logo" />
+        <h1>Woodgrain Classifier</h1>
+        <p>Point your camera at a woodgrain surface to classify it.</p>
+    </header>
 
     <div id="webcam-container"></div>
-    <div id="label-container">Initializing...</div>
-    <div id="confidence-bar"><div id="confidence-fill"></div></div>
+    <div id="label-container"></div>
 
     <script>
         const URL = "https://teachablemachine.withgoogle.com/models/zPFXk5dVn/";
 
-        let model, labelContainer, video, confidenceFill;
+        let model, labelContainer, video;
 
         async function init() {
             const modelURL = URL + "model.json";
@@ -97,7 +85,9 @@
             document.getElementById("webcam-container").appendChild(video);
 
             labelContainer = document.getElementById("label-container");
-            confidenceFill = document.getElementById("confidence-fill");
+            for (let i = 0; i < model.getTotalClasses(); i++) {
+                labelContainer.appendChild(document.createElement("div"));
+            }
 
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
@@ -106,24 +96,21 @@
                 });
                 video.srcObject = stream;
                 video.play();
-
                 video.addEventListener("loadeddata", () => {
                     window.requestAnimationFrame(loop);
                 });
             } catch (err) {
-                console.error("Camera access error:", err);
-                labelContainer.innerText = "Unable to access camera. Please allow permissions.";
+                console.error("Error accessing the camera:", err);
+                labelContainer.innerHTML = "Camera error. Check permissions.";
             }
         }
 
         async function loop() {
             const prediction = await model.predict(video);
-            const best = prediction.reduce((a, b) => a.probability > b.probability ? a : b);
-
-            const confidence = (best.probability * 100).toFixed(1);
-            labelContainer.innerText = ${confidence}% ${best.className};
-            confidenceFill.style.width = ${confidence}%;
-
+            for (let i = 0; i < model.getTotalClasses(); i++) {
+                const classPrediction = prediction[i].className + ": " + prediction[i].probability.toFixed(2);
+                labelContainer.childNodes[i].innerHTML = classPrediction;
+            }
             window.requestAnimationFrame(loop);
         }
 
