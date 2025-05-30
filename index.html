@@ -51,9 +51,26 @@
 
         #label-container {
             margin-top: 20px;
-            font-size: 1.5em;
+            font-size: 1.6em;
             font-weight: bold;
             color: #222;
+        }
+
+        #confidence-bar {
+            width: 90%;
+            max-width: 480px;
+            margin: 10px auto;
+            height: 20px;
+            background-color: #ddd;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        #confidence-fill {
+            height: 100%;
+            width: 0%;
+            background-color: #4CAF50;
+            transition: width 0.2s ease;
         }
     </style>
 </head>
@@ -65,12 +82,15 @@
     </header>
 
     <div id="webcam-container"></div>
-    <div id="label-container"></div>
+    <div id="label-container">Initializing...</div>
+    <div id="confidence-bar">
+        <div id="confidence-fill"></div>
+    </div>
 
     <script>
         const URL = "https://teachablemachine.withgoogle.com/models/zPFXk5dVn/";
 
-        let model, labelContainer, video;
+        let model, labelContainer, video, confidenceFill;
 
         async function init() {
             const modelURL = URL + "model.json";
@@ -85,9 +105,7 @@
             document.getElementById("webcam-container").appendChild(video);
 
             labelContainer = document.getElementById("label-container");
-            for (let i = 0; i < model.getTotalClasses(); i++) {
-                labelContainer.appendChild(document.createElement("div"));
-            }
+            confidenceFill = document.getElementById("confidence-fill");
 
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
@@ -107,10 +125,17 @@
 
         async function loop() {
             const prediction = await model.predict(video);
-            for (let i = 0; i < model.getTotalClasses(); i++) {
-                const classPrediction = prediction[i].className + ": " + prediction[i].probability.toFixed(2);
-                labelContainer.childNodes[i].innerHTML = classPrediction;
-            }
+
+            // Find the most confident prediction
+            const bestPrediction = prediction.reduce((prev, current) => {
+                return (prev.probability > current.probability) ? prev : current;
+            });
+
+            const confidence = (bestPrediction.probability * 100).toFixed(1);
+            labelContainer.innerHTML = ${confidence}% ${bestPrediction.className};
+
+            confidenceFill.style.width = ${confidence}%;
+
             window.requestAnimationFrame(loop);
         }
 
