@@ -49,37 +49,11 @@
             border: 2px solid #333;
         }
 
-        #prediction-container {
+        #label-container {
             margin-top: 20px;
             font-size: 1.5em;
             font-weight: bold;
             color: #222;
-        }
-
-        .prediction-text {
-            margin-bottom: 10px;
-        }
-
-        .progress-bar {
-            width: 200px;
-            height: 20px;
-            background-color: #ddd;
-            border-radius: 10px;
-            overflow: hidden;
-            display: inline-block;
-            vertical-align: middle;
-        }
-
-        .progress {
-            height: 100%;
-            background-color: #4CAF50;
-            border-radius: 10px;
-            transition: width 0.3s ease;
-        }
-
-        #error-message {
-            color: red;
-            margin-top: 10px;
         }
     </style>
 </head>
@@ -91,78 +65,52 @@
     </header>
 
     <div id="webcam-container"></div>
-    <div id="prediction-container">
-        <div id="prediction-text" class="prediction-text"></div>
-        <div class="progress-bar">
-            <div id="progress" class="progress" style="width: 0%;"></div>
-        </div>
-    </div>
-    <div id="error-message"></div>
+    <div id="label-container"></div>
 
     <script>
         const URL = "https://teachablemachine.withgoogle.com/models/zPFXk5dVn/";
 
-        let model, video;
+        let model, labelContainer, video;
 
         async function init() {
             const modelURL = URL + "model.json";
             const metadataURL = URL + "metadata.json";
 
+            model = await tmImage.load(modelURL, metadataURL);
+
+            video = document.createElement("video");
+            video.setAttribute("autoplay", "");
+            video.setAttribute("muted", "");
+            video.setAttribute("playsinline", "");
+            document.getElementById("webcam-container").appendChild(video);
+
+            labelContainer = document.getElementById("label-container");
+            for (let i = 0; i < model.getTotalClasses(); i++) {
+                labelContainer.appendChild(document.createElement("div"));
+            }
+
             try {
-                // Load the model
-                model = await tmImage.load(modelURL, metadataURL);
-                console.log("Model loaded successfully");
-
-                // Set up video element
-                video = document.createElement("video");
-                video.setAttribute("autoplay", "");
-                video.setAttribute("muted", "");
-                video.setAttribute("playsinline", "");
-                document.getElementById("webcam-container").appendChild(video);
-
-                // Request camera access
                 const stream = await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: "environment" },
                     audio: false
                 });
                 video.srcObject = stream;
                 video.play();
-                console.log("Camera stream started");
-
-                // Start prediction loop
                 video.addEventListener("loadeddata", () => {
-                    console.log("Video loaded, starting loop");
                     window.requestAnimationFrame(loop);
                 });
             } catch (err) {
-                console.error("Initialization error:", err);
-                document.getElementById("error-message").innerHTML = Error: ${err.message}. Check console for details.;
+                console.error("Error accessing the camera:", err);
+                labelContainer.innerHTML = "Camera error. Check permissions.";
             }
         }
 
         async function loop() {
-            try {
-                const prediction = await model.predict(video);
-                // Find the prediction with the highest probability
-                let maxPrediction = prediction[0];
-                for (let i = 1; i < prediction.length; i++) {
-                    if (prediction[i].probability > maxPrediction.probability) {
-                        maxPrediction = prediction[i];
-                    }
-                }
-
-                // Display the most likely prediction as a percentage
-                const confidence = (maxPrediction.probability * 100).toFixed(0);
-                const predictionText = ${confidence}% ${maxPrediction.className};
-                document.getElementById("prediction-text").innerHTML = predictionText;
-
-                // Update the progress bar
-                document.getElementById("progress").style.width = ${confidence}%;
-            } catch (err) {
-                console.error("Prediction error:", err);
-                document.getElementById("error-message").innerHTML = Prediction error: ${err.message}. Check console for details.;
+            const prediction = await model.predict(video);
+            for (let i = 0; i < model.getTotalClasses(); i++) {
+                const classPrediction = prediction[i].className + ": " + prediction[i].probability.toFixed(2);
+                labelContainer.childNodes[i].innerHTML = classPrediction;
             }
-
             window.requestAnimationFrame(loop);
         }
 
