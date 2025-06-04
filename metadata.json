@@ -1,1 +1,1 @@
-{"tfjsVersion":"1.7.4","tmVersion":"2.4.10","packageVersion":"0.8.4-alpha2","packageName":"@teachablemachine/image","timeStamp":"2025-06-02T18:51:34.915Z","userMetadata":{},"modelName":"tm-my-image-model","labels":["Ironwood","Coastal Sand","Fawn","NOT LUX ","Hickory","Tobacco"],"imageSize":224}
+{"tfjsVersion":"1.7.4","tmVersion":"2.4.10","packageVersion":"0.8.4-alpha2","packageName":"@teachablemachine/image","timeStamp":"2025-06-04T16:14:30.432Z","userMetadata":{},"modelName":"tm-my-image-model","labels":["NOT LUX ","Ironwood","Hickory","Tobacco"],"imageSize":224}
