@@ -55,28 +55,6 @@
             font-weight: bold;
             color: #222;
         }
-
-        /* Added styles for progress bars */
-        .prediction {
-            margin: 10px 0;
-            padding: 5px;
-        }
-
-        .progress-bar {
-            width: 100%;
-            max-width: 480px;
-            height: 20px;
-            background-color: #e0e0e0;
-            border-radius: 5px;
-            overflow: hidden;
-            margin: 5px auto;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background-color: #4CAF50; /* Green for visual appeal */
-            transition: width 0.3s ease-in-out;
-        }
     </style>
 </head>
 <body>
@@ -108,15 +86,7 @@
 
             labelContainer = document.getElementById("label-container");
             for (let i = 0; i < model.getTotalClasses(); i++) {
-                const predictionDiv = document.createElement("div");
-                predictionDiv.className = "prediction";
-                predictionDiv.innerHTML = `
-                    <div id="label${i}"></div>
-                    <div class="progress-bar">
-                        <div id="bar${i}" class="progress-fill" style="width: 0%"></div>
-                    </div>
-                `;
-                labelContainer.appendChild(predictionDiv);
+                labelContainer.appendChild(document.createElement("div"));
             }
 
             try {
@@ -138,10 +108,8 @@
         async function loop() {
             const prediction = await model.predict(video);
             for (let i = 0; i < model.getTotalClasses(); i++) {
-                const percentage = (prediction[i].probability * 100).toFixed(2);
-                const classPrediction = ${prediction[i].className}: ${percentage}%;
-                document.getElementById(label${i}).innerText = classPrediction;
-                document.getElementById(bar${i}).style.width = ${percentage}%;
+                const classPrediction = prediction[i].className + ": " + prediction[i].probability.toFixed(2);
+                labelContainer.childNodes[i].innerHTML = classPrediction;
             }
             window.requestAnimationFrame(loop);
         }
